@@ -116,19 +116,6 @@ await db.insert(posts).values({ title: "Hello world" });
 
 On every merge to main that changes `extension/`, a GitHub Action builds the extension and uploads it as a **draft** to the Chrome Web Store. It does not publish — publishing is done manually from the CWS dashboard.
 
-### Required secrets
-
-Set these on the GitHub repo for CWS uploads to work:
-
-| Secret | Description |
-|--------|-------------|
-| `CWS_CLIENT_ID` | Google Cloud OAuth2 client ID |
-| `CWS_CLIENT_SECRET` | Google Cloud OAuth2 client secret |
-| `CWS_REFRESH_TOKEN` | OAuth2 refresh token with `chromewebstore` scope |
-| `CWS_EXTENSION_ID` | Chrome Web Store item ID (set after creating the listing) |
-
-If `CWS_EXTENSION_ID` is not set, the upload step is skipped (the build and package steps still run).
-
 ## Rules
 
 1. All database tables **must** be defined in `db/schema.ts`
