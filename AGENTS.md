@@ -143,30 +143,42 @@ Replace the placeholder PNGs in `assets/`:
 
 Icons must be PNG format. Use a simple, recognizable design that works at small sizes.
 
-## Chrome Web Store submission
+## Chrome Web Store
 
-### Requirements for approval
+### How publishing works
+
+Every merge to main that changes `extension/` triggers a GitHub Action that builds and uploads the extension as a **draft** to the Chrome Web Store. Drafts are not published — they sit in the CWS dashboard for the operator to review.
+
+**Publishing is not automatic.** To get the extension published on the Chrome Web Store, agents must **vote to go live** — the same launch vote process used for all product types. When the launch vote passes, the operator reviews the latest draft in the CWS dashboard and submits it for review. CWS review typically takes 1-5 business days for new extensions.
+
+Do not ask the operator to publish directly. The launch vote is the mechanism for going live.
+
+### Before voting to go live
+
+The extension must be complete and CWS-ready before the launch vote. Ensure all of the following:
+
+- [ ] All `{{PRODUCT_NAME}}` and `{{PRODUCT_DESCRIPTION}}` placeholders replaced in `manifest.json` and `popup.html`
+- [ ] Placeholder icons in `assets/` replaced with real icons (16x16, 48x48, 128x128 PNG)
+- [ ] Specific `matches` patterns in content_scripts (avoid `<all_urls>` unless truly needed)
+- [ ] Only permissions the extension actually uses — remove anything unused
+- [ ] Extension builds cleanly (`cd extension && npm run build`)
+- [ ] Marketing site has a landing page explaining the extension
+- [ ] Privacy policy page on the marketing site (required if collecting any user data)
+
+### CWS requirements for approval
+
+Chrome Web Store will reject extensions that don't meet these:
 
 1. **Single purpose** — the extension must do one clear thing. CWS rejects "Swiss army knife" extensions.
-2. **Minimal permissions** — only request what you use. Justify each permission in the CWS listing.
+2. **Minimal permissions** — only request what you use. CWS reviewers check this.
 3. **Accurate description** — the CWS description must accurately describe what the extension does. No misleading claims.
-4. **Privacy policy** — required if the extension collects any user data. Host it on the marketing site (e.g., `/privacy`).
+4. **Privacy policy** — required if the extension collects any user data.
 5. **Screenshots** — at least one screenshot (1280x800 or 640x400). Show the extension actually working.
 6. **No remote code** — Manifest V3 does not allow remotely hosted code. All JavaScript must be bundled in the extension.
 
-### Before submission
-
-- [ ] Replace all `{{PRODUCT_NAME}}` and `{{PRODUCT_DESCRIPTION}}` placeholders
-- [ ] Replace placeholder icons with real icons
-- [ ] Set specific `matches` patterns in content_scripts (avoid `<all_urls>` unless truly needed)
-- [ ] Remove unused permissions
-- [ ] Bump `version` in `manifest.json`
-- [ ] Run `npm run build && npm run package` to create the zip
-- [ ] Test the zip by loading it as unpacked extension
-
 ### Version bumping
 
-Bump `version` in `manifest.json` before each CWS submission. CWS rejects uploads with the same version as an existing published version. Use semver: `1.0.0` → `1.0.1` for fixes, `1.1.0` for features.
+Bump `version` in `manifest.json` before each update after the extension is live. CWS rejects uploads with the same version as an existing published version. Use semver: `1.0.0` → `1.0.1` for fixes, `1.1.0` for features.
 
 ## Communication between extension components
 
@@ -196,6 +208,7 @@ The database (Neon PostgreSQL via Drizzle ORM) is available for the marketing si
 - `db/index.ts` — database connection
 - `drizzle.config.ts` — database sync config
 - `.github/workflows/push-db-schema.yml` — auto-applies schema on merge
+- `.github/workflows/upload-extension.yml` — uploads extension draft to CWS on merge
 - `.env.example` — environment variable documentation
 - `extension/scripts/build.ts` — esbuild build script
 - `extension/scripts/package.ts` — zip packaging script
