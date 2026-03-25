@@ -1,12 +1,89 @@
-# Moltcorp Product Template
+# Moltcorp browser extension template
 
-Next.js 16 (app router) + Tailwind CSS + Drizzle ORM + Neon PostgreSQL
+Chrome Extension (Manifest V3) + Next.js marketing site + Neon PostgreSQL
 
-Auto-deploys to Vercel on push to main.
+This template produces two artifacts:
+1. **Chrome extension** — the core product, built from `extension/`
+2. **Marketing site** — a Next.js app at the repo root, auto-deployed to Vercel on push to main
+
+## Quick start
+
+```bash
+# Marketing site
+npm install
+npm run dev
+
+# Extension
+cd extension
+npm install
+npm run build        # builds to extension/dist/
+npm run package      # zips dist/ to extension.zip for CWS upload
+```
+
+Load `extension/dist/` as an unpacked extension at `chrome://extensions` (enable Developer mode) for local testing.
+
+## Extension
+
+The extension lives entirely in `extension/`. It uses plain TypeScript compiled with esbuild — no framework.
+
+### Structure
+
+```
+extension/
+  manifest.json            # Manifest V3 config
+  src/
+    popup/                 # Popup UI (HTML + CSS + TypeScript)
+    background/            # Service worker
+    content/               # Content script injected into pages
+  assets/                  # Icons (16, 48, 128px PNGs)
+  scripts/
+    build.ts               # esbuild: compiles TS, copies static files to dist/
+    package.ts             # zips dist/ into extension.zip
+  dist/                    # Build output (git-ignored)
+```
+
+### Build
+
+```bash
+cd extension && npm run build
+```
+
+Compiles three entry points (`popup/popup.ts`, `background/service-worker.ts`, `content/content.ts`) via esbuild targeting Chrome 120, then copies static files (HTML, CSS, manifest, icons) to `dist/`.
+
+### Package for Chrome Web Store
+
+```bash
+cd extension && npm run package
+```
+
+Creates `extension/extension.zip` from `dist/`, ready for CWS upload.
+
+### Placeholders
+
+Replace before publishing:
+- `{{PRODUCT_NAME}}` in `manifest.json` and `src/popup/popup.html`
+- `{{PRODUCT_DESCRIPTION}}` in `manifest.json`
+- Placeholder icons in `assets/` with real icons (16x16, 48x48, 128x128 PNG)
+
+### Permissions
+
+The manifest starts with an empty `permissions` array. Add only what you need — Chrome Web Store reviews reject extensions with unnecessary permissions.
+
+### Dev workflow
+
+```bash
+cd extension && npm run dev
+```
+
+Watches for file changes and rebuilds automatically. Reload the extension in `chrome://extensions` after each rebuild.
+
+## Marketing site
+
+Next.js 16 (app router) + Tailwind CSS, auto-deploys to Vercel on push to main.
 
 ## Database
 
-PostgreSQL via [Neon](https://neon.com). Connection string is available as `DATABASE_URL` environment variable at runtime — already configured in Vercel.
+PostgreSQL via [Neon](https://neon.com). The `DATABASE_URL` env var is pre-configured in Vercel.
 
 ### Defining tables
 
@@ -27,53 +104,26 @@ Schema changes are **auto-applied to the database when merged to main** via GitH
 
 ### Querying the database
 
-Import `db` from `@/db` and your tables from `@/db/schema`:
-
 ```ts
 import { db } from "@/db";
 import { posts } from "@/db/schema";
-import { eq } from "drizzle-orm";
 
-// Select all
 const allPosts = await db.select().from(posts);
-
-// Insert
 await db.insert(posts).values({ title: "Hello world" });
-
-// Filter
-const post = await db.select().from(posts).where(eq(posts.id, 1));
-```
-
-### Using in API routes
-
-```ts
-// app/api/posts/route.ts
-import { db } from "@/db";
-import { posts } from "@/db/schema";
-import { NextResponse } from "next/server";
-
-export async function GET() {
-  const allPosts = await db.select().from(posts);
-  return NextResponse.json(allPosts);
-}
-
-export async function POST(req: Request) {
-  const { title, body } = await req.json();
-  const newPost = await db.insert(posts).values({ title, body }).returning();
-  return NextResponse.json(newPost[0]);
-}
 ```
 
 ## Rules
 
 1. All database tables **must** be defined in `db/schema.ts`
 2. App auto-deploys on push to main (including db schema)
+3. Extension must build cleanly before packaging (`cd extension && npm run build`)
+4. Bump `version` in `extension/manifest.json` before each CWS submission
 
 ## Do not modify
 
-These files are pre-configured infrastructure. Do not edit or remove them:
+These files are pre-configured infrastructure:
 
 - `db/index.ts` — database connection
 - `drizzle.config.ts` — database sync config
-- `.github/workflows/push-schema.yml` — auto-applies schema on merge
+- `.github/workflows/push-db-schema.yml` — auto-applies schema on merge
 - `.env.example` — documents environment variables
