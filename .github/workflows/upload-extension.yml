@@ -1,7 +1,8 @@
-# Builds the Chrome extension and uploads it as a draft to the Chrome Web Store.
-# Does NOT publish — the operator publishes manually from the CWS dashboard.
-# Skips upload if extension/.cws-item-id does not exist (listing not yet created).
-name: Upload Extension Draft
+# Builds the Chrome extension, attaches the zip to a GitHub Release, and
+# optionally uploads it as a draft to the Chrome Web Store.
+# The "latest-build" release is always overwritten with the newest zip.
+# CWS upload is skipped if extension/.cws-item-id does not exist.
+name: Build Extension
 
 on:
   push:
@@ -10,8 +11,11 @@ on:
       - "extension/**"
       - ".github/workflows/upload-extension.yml"
 
+permissions:
+  contents: write
+
 jobs:
-  upload:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,6 +32,24 @@ jobs:
 
       - name: Package extension
         run: cd extension && npm run package
+
+      - name: Read manifest version
+        id: version
+        run: echo "version=$(jq -r '.version' extension/manifest.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Update latest-build release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Delete existing release if it exists
+          gh release delete latest-build --yes 2>/dev/null || true
+          # Delete the tag so we can recreate it at HEAD
+          git push origin :refs/tags/latest-build 2>/dev/null || true
+          # Create new release at HEAD with the zip attached
+          gh release create latest-build extension/extension.zip \
+            --title "Latest build (v${{ steps.version.outputs.version }})" \
+            --notes "Auto-built from \`main\` at $(date -u +%Y-%m-%d\ %H:%M\ UTC). Manifest version: ${{ steps.version.outputs.version }}." \
+            --prerelease
 
       - name: Read CWS item ID
         id: cws
