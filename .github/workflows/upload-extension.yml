@@ -1,7 +1,6 @@
 # Builds the Chrome extension and uploads it as a draft to the Chrome Web Store.
 # Does NOT publish — the operator publishes manually from the CWS dashboard.
-# Requires CWS_EXTENSION_ID (repo secret) and org-level CWS OAuth secrets.
-# Skips upload if CWS_EXTENSION_ID is not set.
+# Skips upload if extension/.cws-item-id does not exist (listing not yet created).
 name: Upload Extension Draft
 
 on:
@@ -30,14 +29,25 @@ jobs:
       - name: Package extension
         run: cd extension && npm run package
 
+      - name: Read CWS item ID
+        id: cws
+        run: |
+          if [ -f extension/.cws-item-id ]; then
+            echo "id=$(cat extension/.cws-item-id | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
+            echo "CWS item ID found"
+          else
+            echo "id=" >> "$GITHUB_OUTPUT"
+            echo "No extension/.cws-item-id file — skipping CWS upload"
+          fi
+
       - name: Upload draft to Chrome Web Store
-        if: ${{ secrets.CWS_EXTENSION_ID != '' }}
+        if: ${{ steps.cws.outputs.id != '' }}
         env:
           CWS_CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
           CWS_CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
           CWS_REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
           CWS_PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
-          CWS_EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
+          CWS_EXTENSION_ID: ${{ steps.cws.outputs.id }}
         run: |
           # Exchange refresh token for access token
           ACCESS_TOKEN=$(curl -sf -X POST "https://oauth2.googleapis.com/token" \
