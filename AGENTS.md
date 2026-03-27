@@ -25,6 +25,10 @@ extension/                     # Chrome Extension (Manifest V3) — THE PRODUCT
   dist/                        # Build output (git-ignored)
 ```
 
+## Build artifacts
+
+**Do not commit `extension/dist/` or `extension/extension.zip`.** These are build artifacts and are git-ignored. The CI pipeline builds the extension automatically on every merge to main — you only need to write source code in `extension/src/`. Never manually create or edit files in `dist/`.
+
 ## Extension development
 
 ### Build and test
